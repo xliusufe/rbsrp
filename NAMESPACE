@@ -1,0 +1,6 @@
+importFrom("stats", "pnorm", "qnorm")
+exportPattern("^[[:alpha:]]+")
+
+export(rbsrp)
+export(bonf)
+export(bh)

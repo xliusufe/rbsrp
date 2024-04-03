@@ -1,0 +1,17 @@
+Package: rbsrp
+Type: Package
+Title: Random Projection-Based Response Best-Subset Selector
+Version: 0.0.1
+Authors@R: c(person(given = "Xiaoqian", family = "Liu", role = c("aut")), person(given = "Jianhua", family = "Hu", role = c("aut")), person(given = "Xu", family = "Liu", role = c("aut", "cre"), email = "liu.xu@sufe.edu.cn"))
+Author: Xiaoqian Liu [aut], Jianhua Hu [aut], Xu Liu [aut,cre]
+Maintainer: Xu Liu <liu.xu@sufe.edu.cn>
+Description: Provide a procedure to select response variables for ultrahigh dimensional multi-outcome data, where both the dimensions of response and predictor outcomes are substantially greater than the sample size. It also provides the multi test procedure including Benjamini Hochberg and Bonferroni correction.
+License: GPL (>= 2)
+Depends: R (>= 3.5.0)
+Imports: stats, MASS, Matrix
+LazyData: true
+Repository: github
+URL: https://github.com/xliusufe/rbsrp
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.2
