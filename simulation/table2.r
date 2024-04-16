@@ -22,7 +22,7 @@ gram.orth <- function(U){
     PC  <- matrix(0, pp, pp)
     for (s in 1:pp)
     {
-        W       <- PC%*%U[,s]
+        W       <- PC %*% U[,s]
         V[,s]   <- (U[,s]-W)/norm((U[,s]-W),"2")
         if (s < pp)
         {
@@ -46,10 +46,12 @@ dataGenerator <- function(X, C, n, q, Sigma05, Coefficient, normal){
     Y <- X %*% Coefficient + Error
     
     W <- X %*% C
+
     return(
         list(
             Y = Y,
-            W = W
+            W = W,
+            Error = Error
         )
 
     )
@@ -57,23 +59,24 @@ dataGenerator <- function(X, C, n, q, Sigma05, Coefficient, normal){
 
 main <- function(n,p,q,m0){
 
-    if(m0 == 100 && n == 100){theta.h = 4.15}
-    else if(m0 == 100 && n == 200){theta.h = 2.55}
-    else if(m0 == 1 && n == 100 && p == 1000){theta.h = 18}
-    else if(m0 == 1 && n == 100 && p == 3000){theta.h = 33}
-    else if(m0 == 1 && n == 200 && p == 1000){theta.h = 8.3}
-    else if(m0 == 1 && n == 200 && p == 3000){theta.h = 14}
+    if(m0 == 100 && n == 100){theta.h = 4.2}
+    else if(m0 == 100 && n == 200){theta.h = 2.95}
+    else if(m0 == 1 && n == 100 && p == 1000){theta.h = 19.5}
+    else if(m0 == 1 && n == 100 && p == 3000){theta.h = 33.4}
+    else if(m0 == 1 && n == 200 && p == 1000){theta.h = 9.5}
+    else if(m0 == 1 && n == 200 && p == 3000){theta.h = 16}
 
     nreplication    = 500                       # replication times
     q1              = 100
     normal          = FALSE                     # normal=TRUE means N(0,1)  and normal=FALSE means student t(3)
 
+    set.seed(100)
     Z   <- matrix(rnorm(n*p, 0, 1), n, p)
 	p0  <- p/m0
 	Q   <- matrix(0, p, p)
 	for (i in 1:m0){
 		U           <- matrix(rnorm(p0*p0, 0, 2), p0, p0)
-		startpoint  <-(i-1)*p0 + 1
+		startpoint  <- (i-1)*p0 + 1
 		endpoint    <- i*p0
 		Q[startpoint:endpoint,startpoint:endpoint] <- gram.orth(U)
 	}
@@ -104,6 +107,7 @@ main <- function(n,p,q,m0){
     Coefficient <- matrix(0, p, q)
     Theta0      <- matrix(runif(p1*q1, min=-theta.h, max=theta.h), p1, q1)
     Coefficient[x.activeset, y.activeset] <- Theta0
+    XB = norm(X%*%Coefficient,"F")^2
 
     MS1     <- matrix(0, 1, nreplication)
     TP1     <- matrix(0, 1, nreplication)
@@ -129,6 +133,7 @@ main <- function(n,p,q,m0){
     Prec4   <- matrix(0, 1, nreplication)
     Fscore4 <- matrix(0, 1, nreplication)
 
+    SNR     <- matrix(0,1,nreplication)
     sigma   <- sample(c(1:15), q, replace=TRUE)
     U1      <- matrix(rnorm(q*q, 0, 2), q, q)
     O1      <- gram.orth(U1)
@@ -137,9 +142,12 @@ main <- function(n,p,q,m0){
     ptm <- proc.time()
     # Loop of replications    
     for (m in 1:nreplication){
-        dgp = dataGenerator(X, C, n, q, Sigma05, Coefficient, normal)
-        Y   = dgp$Y
-        W   = dgp$W
+        set.seed(1e4+m)
+        dgp     = dataGenerator(X, C, n, q, Sigma05, Coefficient, normal)
+        Y       = dgp$Y
+        W       = dgp$W
+        error   = dgp$Error
+        SNR[m]  = XB/norm(error[,y.activeset],"F")^2
         
         ########################################################### 
         #  Method 1: RBS via max(min(cv),min(gcv))
@@ -223,6 +231,7 @@ main <- function(n,p,q,m0){
     }
 
     # Means of replication
+    SNR_mean    <- mean(SNR,na.rm = TRUE)
     TPR1        <- mean(TP1, na.rm = TRUE)/q1
     FPR1        <- mean(FP1, na.rm = TRUE)/(q-q1)
     F1          <- mean(Fscore1, na.rm = TRUE)
@@ -247,11 +256,12 @@ main <- function(n,p,q,m0){
     P4          <- mean(Prec4, na.rm = TRUE)
     BY.mean     <- c(TPR4, 1-FPR4, F4)
 
-    result     = matrix(NA, 4, 3)
-    result[1,] = round(RBS.mean, digits=4)
-    result[2,] = round(Bonf.mean, digits=4)
-    result[3,] = round(FDR05.mean, digits=4)
-    result[4,] = round(BY.mean, digits=4)
+    result          = matrix(NA, 4, 4)
+    result[,1]      = rep(round(SNR_mean, digits=4),4)
+    result[1,2:4]   = round(RBS.mean, digits=4)
+    result[2,2:4]   = round(Bonf.mean, digits=4)
+    result[3,2:4]   = round(FDR05.mean, digits=4)
+    result[4,2:4]   = round(BY.mean, digits=4)
     
     # ################
 
@@ -270,7 +280,7 @@ exam <- function(){
     n_args  = c(length(response.number), length(sample.size), length(m00), length(predictor.number)) # 2*2*2*2=16
     jobs    = assig(n_args)
 
-    result = matrix(NA, 32, 6)
+    result = matrix(NA, 32, 8)
  
     for(number in 1:ncol(jobs)){
         id      = jobs[, number]           # number = 1: q=2000,n=100,m0=100,p=1000; number = 2: q=5000,n=100,m0=100,p=1000; number = 3: q=2000,n=200,m0=100,p=1000; number = 4: q=5000,n=200,m0=100,p=1000.
@@ -280,10 +290,10 @@ exam <- function(){
         p       = predictor.number[id[4]]
 
         cat("n = ", n, " p = ", p, " q = ", q, " m0 = ", m0, "\n") 
-        if(1 <= number && number <= (ncol(jobs)/2)){result[(4*number-3):(4*number),1:3] = main(n,p,q,m0) }
-        else {result[(4*number-35):(4*number-32),4:6] = main(n,p,q,m0)}
+        if(1 <= number && number <= (ncol(jobs)/2)){result[(4*number-3):(4*number),1:4] = main(n,p,q,m0) }
+        else {result[(4*number-35):(4*number-32),5:8] = main(n,p,q,m0)}
     }
-    colnames(result) = rep(c("TPR", "TNR", "F-score"), 2)
+    colnames(result) = rep(c("SNR", "TPR", "TNR", "F-score"), 2)
     rownames(result) = rep(c("RBS", "Bonf", "FDR05", "BY"), 8)
     write.csv(result, file = "./Table2.csv")
 }
